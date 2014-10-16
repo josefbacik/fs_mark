@@ -27,13 +27,12 @@
 #define MAX_THREADS		(64)		/* Max number of threads allowed */
 #define MAX_NAME_PATH		(40)		/* Length of the pathname before the leaf */
 #define FILENAME_SIZE		(128) 		/* Max length of filenames */
-#define USECS_PER_MINUTE	(1000000ULL * 60)
 #define MAX_STRING_SIZE		(160)	    	/* Max number of bytes in a string */
 
 /*
  * Default values
  */
-#define DEFAULT_MINS_PER_DIR	(3)
+#define DEFAULT_SECS_PER_DIR	(180)
 #define DEFAULT_FILE_SIZE	(50 * 1024)
 #define DEFAULT_IO_SIZE		(16 * 1024)
 #define DEFAULT_NUM_FILES	(1000)
@@ -116,7 +115,7 @@ int	num_per_subdir = 0;			/* Determine how many files to write to each subdirect
 int	num_dirs = 0;				/* Number of directories passed in as args */
 int 	files_in_subdir = 0;
 int 	current_subdir = 0;
-unsigned long long usecs_per_directory = (USECS_PER_MINUTE * DEFAULT_MINS_PER_DIR);
+unsigned long secs_per_directory = DEFAULT_SECS_PER_DIR;
 
 
 /*
@@ -132,7 +131,7 @@ FILE	*child_log_file_fp;			/* Child file pointer for log file  */
 
 unsigned int loop_count = 0;			/* How many times to loop */
 unsigned int file_count = 0;			/* How many files written in this run  */
-unsigned long long start_usec_time = 0;
+unsigned long long start_sec_time = 0;
 
 static char io_buffer[MAX_IO_BUFFER_SIZE];	/* Buffer used in writes to files */
 

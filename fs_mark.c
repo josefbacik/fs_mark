@@ -24,7 +24,7 @@
 /*
  * Version string should be bumped on major revision changes
  */
-char *fs_mark_version = "Version 3.2";
+char *fs_mark_version = "3.3";
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -303,22 +303,24 @@ void setup_file_name(int file_index, pid_t my_pid)
 {
 	int seq_len;
 	int j, pad, skip;
-	unsigned long long usec_time;
+	unsigned long sec_time;
 	char *my_dir;
 	my_dir = find_dir_name(my_pid);
 	char subdir_name[MAX_NAME_PATH];
+	struct timeval now;
 
 	/*
-	 * Get the current time in useconds
+	 * Get the current time.
 	 */
-	usec_time = tvnow();
-
+	(void) gettimeofday(&now, (struct timezone *) 0);
+	sec_time = now.tv_sec;
+	
 	/*
 	 * If this is the first run, record this time in
-	 * start_usec_time.
+	 * start_sec_time.
 	 */
-	if (start_usec_time == 0) {
-		start_usec_time = usec_time;
+	if (start_sec_time == 0) {
+	    start_sec_time = sec_time;
 	}
 
 	/*
@@ -364,9 +366,9 @@ void setup_file_name(int file_index, pid_t my_pid)
 		break;
 
 	case DIR_TIME_HASH:
-		if ((usec_time - start_usec_time) > usecs_per_directory) {
+		if ((sec_time - start_sec_time) > secs_per_directory) {
 			current_subdir = (current_subdir + 1) % num_subdirs;
-			start_usec_time = usec_time;
+			start_sec_time = sec_time;
 		}
 		sprintf(subdir_name, "%02x", current_subdir);
 		break;
@@ -394,7 +396,7 @@ void setup_file_name(int file_index, pid_t my_pid)
 	/*
 	 * Set up the sequential name for this file
 	 */
-	sprintf(seq_name, "%llx", usec_time);
+	sprintf(seq_name, "%lx", sec_time);
 
 	/*
 	 * Compute a random name for the file
@@ -635,13 +637,6 @@ void do_run(pid_t my_pid)
 	 * Verify that there is enough space for this run.
 	 */
 	check_space(my_pid);
-
-	/*
-	 * If we are using any sync methods (other than none), issue a sync() to try and
-	 * get the file system into a clean state.
-	 */
-	if (sync_method > 0)
-		sync();
 
 	/*
 	 * This loop uses microsecond timers to measure each individual file operation.
@@ -1219,10 +1214,8 @@ void print_run_info(FILE * log_fp, int argc, char **argv)
 			"#\tDirectories:  %s across %d subdirectories with %d %s.\n",
 			dir_policy_string[dir_policy], num_subdirs,
 			dir_policy ==
-			DIR_ROUND_ROBIN ? num_per_subdir
-			: ((unsigned int)(usecs_per_directory / 1000000)),
-			dir_policy ==
-			DIR_ROUND_ROBIN ? "files per subdirectory" :
+			DIR_ROUND_ROBIN ? num_per_subdir : (int) secs_per_directory,
+			dir_policy == DIR_ROUND_ROBIN ? "files per subdirectory" :
 			"seconds per subdirectory");
 	} else
 		fprintf(log_fp, "#\tDirectories:  no subdirectories used\n");
