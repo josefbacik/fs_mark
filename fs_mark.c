@@ -1301,10 +1301,18 @@ void print_iteration_stats(FILE * log_fp, fs_mark_stat_t * iteration_stats,
 	return;
 }
 
+static int interrupted = 0;
+static void handle_sigint(int sig, siginfo_t *siginfo, void *context)
+{
+	interrupted = 1;
+}
+
 int main(int argc, char **argv, char **envp)
 {
 	unsigned int files_written = 0;
 	unsigned int loops_done = 0;
+	fs_mark_stat_t total_stats = {};
+	struct sigaction act;
 
 	process_args(argc, argv, envp);
 
@@ -1316,6 +1324,15 @@ int main(int argc, char **argv, char **envp)
 		fprintf(stderr,
 			"fs_mark: failed to fopen log file: %s %s\n",
 			log_file_name, strerror(errno));
+		cleanup_exit();
+	}
+
+	memset(&act, 0, sizeof(act));
+	act.sa_sigaction = &handle_sigint;
+	act.sa_flags = SA_SIGINFO;
+
+	if (sigaction(SIGINT, &act, NULL) < 0) {
+		perror("sigaction");
 		cleanup_exit();
 	}
 
@@ -1349,12 +1366,22 @@ int main(int argc, char **argv, char **envp)
 		 */
 		files_written += iteration_stats.file_count;
 
+		if (loops_done == 0)
+			total_stats.files_per_sec =
+				iteration_stats.files_per_sec;
+		else
+			total_stats.files_per_sec =
+				(total_stats.files_per_sec +
+				 iteration_stats.files_per_sec) / 2;
+
 		print_iteration_stats(stdout, &iteration_stats, files_written);
 		print_iteration_stats(log_file_fp, &iteration_stats,
 				      files_written);
 		loops_done++;
 
-	} while (do_fill_fs || (loop_count > loops_done));
+	} while (do_fill_fs || (loop_count > loops_done) || !interrupted);
+
+	printf("Average Files/sec: %12.1f", total_stats.files_per_sec);
 
 	return (0);
 }

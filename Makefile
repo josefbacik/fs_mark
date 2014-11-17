@@ -17,7 +17,7 @@ all: fs_mark
 fs_mark.o: fs_mark.c fs_mark.h
 
 fs_mark: fs_mark.o lib_timing.o
-	${CC} -static -o fs_mark fs_mark.o lib_timing.o
+	${CC} -o fs_mark fs_mark.o lib_timing.o
 
 test: fs_mark
 	./fs_mark -d ${DIR1} -d ${DIR2} -s 51200 -n 4096
