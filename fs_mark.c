@@ -1307,11 +1307,29 @@ static void handle_sigint(int sig, siginfo_t *siginfo, void *context)
 	interrupted = 1;
 }
 
+/*
+ * This does the reverse sort because we want to do the percentiles to show how
+ * slow we could be going.
+ */
+static int cmp(const void *p1, const void *p2)
+{
+	unsigned long long a = *(unsigned long long *)p1;
+	unsigned long long b = *(unsigned long long *)p2;
+
+	if (a > b)
+		return -1;
+	else if (a < b)
+		return 1;
+	return 0;
+}
+
 int main(int argc, char **argv, char **envp)
 {
 	unsigned int files_written = 0;
 	unsigned int loops_done = 0;
-	fs_mark_stat_t total_stats = {};
+	unsigned long long *files_per_sec;
+	unsigned long long files_per_sec_sum = 0;
+	unsigned nr_iters = 0;
 	struct sigaction act;
 
 	process_args(argc, argv, envp);
@@ -1342,6 +1360,12 @@ int main(int argc, char **argv, char **envp)
 	print_run_info(stdout, argc, argv);
 	print_run_info(log_file_fp, argc, argv);
 
+	files_per_sec = malloc(sizeof(unsigned long long));
+	if (!files_per_sec) {
+		perror("malloc");
+		cleanup_exit();
+	}
+
 	/*
 	 * This is the main loop of the program - we loop here until
 	 * the file system is full when running in "-F" fill mode
@@ -1366,22 +1390,34 @@ int main(int argc, char **argv, char **envp)
 		 */
 		files_written += iteration_stats.file_count;
 
-		if (loops_done == 0)
-			total_stats.files_per_sec =
-				iteration_stats.files_per_sec;
-		else
-			total_stats.files_per_sec =
-				(total_stats.files_per_sec +
-				 iteration_stats.files_per_sec) / 2;
+		if (loops_done > 0) {
+			files_per_sec= realloc(files_per_sec,
+					       sizeof(unsigned long long) *
+					       (nr_iters + 1));
+			if (!files_per_sec) {
+				perror("realloc");
+				cleanup_exit();
+			}
+		}
+
+		files_per_sec[nr_iters] = iteration_stats.files_per_sec;
+		files_per_sec_sum += iteration_stats.files_per_sec;
+		nr_iters++;
 
 		print_iteration_stats(stdout, &iteration_stats, files_written);
 		print_iteration_stats(log_file_fp, &iteration_stats,
 				      files_written);
 		loops_done++;
 
-	} while (do_fill_fs || (loop_count > loops_done) || !interrupted);
+	} while ((do_fill_fs || (loop_count > loops_done)) && !interrupted);
 
-	printf("Average Files/sec: %12.1f", total_stats.files_per_sec);
+	qsort(files_per_sec, nr_iters, sizeof(unsigned long long), cmp);
+
+	printf("Average Files/sec: %12.1f\n",
+	       (float)files_per_sec_sum / nr_iters);
+	printf("p50 Files/sec: %llu\n", files_per_sec[nr_iters / 2]);
+	printf("p90 Files/sec: %llu\n", files_per_sec[(nr_iters * 9) / 10]);
+	printf("p99 Files/sec: %llu\n", files_per_sec[(nr_iters * 99) / 100]);
 
 	return (0);
 }
