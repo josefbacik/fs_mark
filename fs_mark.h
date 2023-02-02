@@ -25,7 +25,7 @@
 #define MAX_IO_BUFFER_SIZE 	(1024 * 1024) 	/* Max write buffer size is 1MB */
 #define MAX_FILES		(1000000)	/* Max number of files to test of each size */
 #define MAX_THREADS		(64)		/* Max number of threads allowed */
-#define MAX_NAME_PATH		(40)		/* Length of the pathname before the leaf */
+#define MAX_NAME_PATH		(1000)		/* Length of the pathname before the leaf */
 #define FILENAME_SIZE		(128) 		/* Max length of filenames */
 #define MAX_STRING_SIZE		(160)	    	/* Max number of bytes in a string */
 
