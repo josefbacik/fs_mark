@@ -10,14 +10,18 @@ DIR1= /test/dir1
 DIR2= /test/dir2
 
 COBJS= fs_mark.o lib_timing.o
-CFLAGS= -O2 -Wall -D_FILE_OFFSET_BITS=64
+
+CC ?= gcc
+CFLAGS ?= -O2
+LDFLAGS ?=
+CFLAGS += -Wall -D_FILE_OFFSET_BITS=64
 
 all: fs_mark 
 
 fs_mark.o: fs_mark.c fs_mark.h
 
 fs_mark: fs_mark.o lib_timing.o
-	${CC} -o fs_mark fs_mark.o lib_timing.o
+	$(CC) $(CFLAGS) -o fs_mark fs_mark.o lib_timing.o $(LDFLAGS)
 
 test: fs_mark
 	./fs_mark -d ${DIR1} -d ${DIR2} -s 51200 -n 4096
